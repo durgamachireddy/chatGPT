@@ -4,11 +4,11 @@ const fs = require('fs');
 const FormData = require('form-data');
 const app = express();
 app.use(express.json());
-require('dotenv').config({ path: './api.env' });
+require('dotenv').config();
 
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY; // your OpenAI API key
-const ASSISTANT_ID = 'asst_DMtgtvCplYXOYt0LmuuSMJWW'; // your Assistant ID
+const ASSISTANT_ID = process.env.ASSISTANT_ID;; // your Assistant ID
 
 app.post('/upload-knowledge', async (req, res) => {
     try {
