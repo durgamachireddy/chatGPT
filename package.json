@@ -1,9 +1,9 @@
 {
   "name": "knowledgearticle",
   "version": "1.0.0",
-  "main": "server.js",  // ✅ Should be server.js, not index.js
+  "main": "server.js",
   "scripts": {
-    "start": "node server.js",  // ✅ Add a start script
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,7 +12,7 @@
   "description": "",
   "dependencies": {
     "axios": "^1.9.0",
-    "dotenv": "^16.0.0",  // ✅ NEW - Required for environment variables
+    "dotenv": "^16.0.0",
     "express": "^5.1.0",
     "form-data": "^4.0.2",
     "multer": "^1.4.5-lts.2"
