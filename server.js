@@ -1,75 +1,79 @@
+// server.js (Final Version)
+
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
 const FormData = require('form-data');
-require('dotenv').config(); // Load .env at top
 const app = express();
 
-app.use(express.json());
+app.use(express.json({
+    type: ['application/json', 'application/x-www-form-urlencoded']
+}));
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY; 
-const ASSISTANT_ID = process.env.ASSISTANT_ID;
+require('dotenv').config();
 
-// ➡️ Health check route
-app.get('/', (req, res) => {
-    res.send('✅ Server is up and running!');
-});
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY; // your OpenAI API key
+const ASSISTANT_ID = process.env.ASSISTANT_ID; // your Assistant ID
 
-// ➡️ Upload route
 app.post('/upload-knowledge', async (req, res) => {
-    console.log('🔔 Received a knowledge upload request!');
-
     try {
-        const { title, summary, content, url } = req.body;
-        console.log('📄 Article received:', { title, url });
+        console.log('🔔 Received a knowledge upload request!');
 
-        const articleText = `
-        Title: ${title}
-        Summary: ${summary}
-        URL: ${url}
-        
-        Content:
-        ${content}
-        `;
+        const articles = Array.isArray(req.body) ? req.body : [req.body]; // Wrap single article as array if needed
+        console.log('📄 Articles received:', articles.map(a => ({ title: a.title, url: a.url })));
 
-        const fileName = `./temp_${Date.now()}_${title.replace(/\s+/g, '_')}.txt`;
-        fs.writeFileSync(fileName, articleText);
-        console.log(`✅ Temp file created: ${fileName}`);
-
-        // Upload file to OpenAI
-        const formData = new FormData();
-        formData.append('file', fs.createReadStream(fileName));
-        formData.append('purpose', 'assistants');
-
-        const uploadResponse = await axios.post('https://api.openai.com/v1/files', formData, {
-            headers: {
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
-                ...formData.getHeaders()
+        for (const article of articles) {
+            if (!article.title || !article.content || !article.url) {
+                console.error('⚠️ Missing article fields:', article);
+                continue;
             }
-        });
 
-        const fileId = uploadResponse.data.id;
-        console.log('✅ File uploaded to OpenAI with ID:', fileId);
+            const articleText = `
+            Title: ${article.title}
+            Summary: ${article.summary || ''}
+            URL: ${article.url}
+            
+            Content:
+            ${article.content}
+            `;
 
-        // Attach file to Assistant
-        await axios.post(`https://api.openai.com/v1/assistants/${ASSISTANT_ID}/files`, 
-        { file_id: fileId }, 
-        {
-            headers: {
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
+            const fileName = `./temp_${Date.now()}_${article.title.replace(/\s+/g, '_')}.txt`;
+            fs.writeFileSync(fileName, articleText);
 
-        console.log('🎯 File linked to Assistant successfully.');
+            // Step 1: Upload file to OpenAI
+            const formData = new FormData();
+            formData.append('file', fs.createReadStream(fileName));
+            formData.append('purpose', 'assistants');
 
-        fs.unlinkSync(fileName); // Cleanup
-        console.log('🧹 Temp file deleted.');
+            const uploadResponse = await axios.post('https://api.openai.com/v1/files', formData, {
+                headers: {
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                    ...formData.getHeaders()
+                }
+            });
 
-        res.send('✅ Knowledge Article Uploaded and Linked Successfully!');
+            const fileId = uploadResponse.data.id;
+            console.log('✅ File uploaded with ID:', fileId);
+
+            // Step 2: Attach file to Assistant's Vector Store
+            await axios.post(`https://api.openai.com/v1/assistants/${ASSISTANT_ID}/files`, 
+            { file_id: fileId }, 
+            {
+                headers: {
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('✅ File attached to Assistant successfully.');
+
+            fs.unlinkSync(fileName); // Delete temp file
+        }
+
+        res.send('✅ All knowledge articles uploaded and linked successfully!');
     } catch (error) {
         console.error('❌ Upload failed:', error.response?.data || error.message);
-        res.status(500).send('🚨 Error uploading and linking file.');
+        res.status(500).send('Error uploading and linking file');
     }
 });
 
