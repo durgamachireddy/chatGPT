@@ -57,13 +57,14 @@ app.post('/upload-knowledge', async (req, res) => {
 
             // Step 2: Attach file to Assistant's Vector Store
             await axios.post(`https://api.openai.com/v1/assistants/${ASSISTANT_ID}/files`, 
-            { file_id: fileId }, 
-            {
-                headers: {
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+                { file_id: fileId }, 
+                {
+                    headers: {
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                        'Content-Type': 'application/json',
+                        'OpenAI-Beta': 'assistants=v2'  // 🛠 ADD THIS LINE
+                    }
+                });
 
             console.log('✅ File attached to Assistant successfully.');
 
